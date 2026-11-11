@@ -1,7 +1,9 @@
+import { Logo } from "@/components/Logo";
+
 export function AuthSide() {
   return (
     <div className="side">
-      <div className="mark">FE</div>
+      <Logo variant="auth" />
       <div>
         <h1>FYNE EDGE Operations</h1>
         <p>Tickets, client onboarding and closings, hiring approvals, and the sales pipeline in one place.</p>
