@@ -95,13 +95,15 @@ export function ClientsView({ isAdmin, clients, users, openByClient }: {
     { name: "value", label: "Project value (AED)", type: "number" },
     { name: "startDate", label: "Kickoff date", type: "date" },
     { name: "leadId", label: "Project lead", type: "select", options: [["", "None"], ...users.filter((u) => u.active).map((u) => [u.id, u.name] as const)] },
+    { name: "stage", label: "Stage", type: "select", options: CLIENT_STAGES, help: "Pick Active, Closing or Closed to add an existing or past client." },
+    { name: "closedAt", label: "Closed date (for closed clients)", type: "date", help: "Leave empty to use today." },
     { name: "notes", label: "Notes", type: "textarea", full: true },
   ];
 
   return (
     <>
       <PageHead title="Clients" sub="Onboard new clients, assign developers, and work through closing.">
-        {isAdmin ? <button className="btn primary" onClick={() => setEditing({ startDate: todayISO(), service: "Website" })}>+ New client</button> : null}
+        {isAdmin ? <button className="btn primary" onClick={() => setEditing({ startDate: todayISO(), service: "Website", stage: tab })}>+ New client</button> : null}
       </PageHead>
       <div className="tabs">
         {CLIENT_STAGES.map(([k, l]) => <button key={k} className={k === tab ? "on" : ""} onClick={() => setTab(k)}>{l}<span className="n">{rows.filter((c) => c.stage === k).length}</span></button>)}
@@ -130,7 +132,8 @@ export function ClientsView({ isAdmin, clients, users, openByClient }: {
 
       {editing ? (
         <FormModal title={editing.id ? (isAdmin ? "Edit client" : editing.name!) : "New client"} fields={fields} initial={editing} readOnly={!isAdmin}
-          onSubmit={(v) => saveClient(editing.id ?? null, v)} onDelete={editing.id && isAdmin ? () => deleteClient(editing.id!) : undefined} onClose={() => setEditing(null)} />
+          onSubmit={async (v) => { const r = await saveClient(editing.id ?? null, v); if (r.ok) setTab(v.stage as ClientStage); return r; }}
+          onDelete={editing.id && isAdmin ? () => deleteClient(editing.id!) : undefined} onClose={() => setEditing(null)} />
       ) : null}
       {assigning ? (
         <FormModal title={`Assign developers · ${assigning.name}`} submitLabel="Save assignment"

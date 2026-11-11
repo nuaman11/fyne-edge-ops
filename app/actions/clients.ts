@@ -18,14 +18,28 @@ const schema = z.object({
   startDate: optDate,
   leadId: optId,
   notes: optStr(5000),
+  stage: z.enum(["ONBOARDING", "ACTIVE", "CLOSING", "CLOSED"]).default("ONBOARDING"),
+  closedAt: optDate,
 });
+
+const allDone = (items: readonly (readonly [string, string])[]) => Object.fromEntries(items.map(([k]) => [k, true]));
 
 export async function saveClient(id: string | null, input: unknown): Promise<ActionResult> {
   return run(async () => {
     await adminActor();
-    const v = schema.parse(input);
-    if (id) await db.update(clients).set(v).where(eq(clients.id, id));
-    else id = (await db.insert(clients).values(v).returning({ id: clients.id }))[0]!.id;
+    const { stage, closedAt, ...v } = schema.parse(input);
+    // Admins can set any stage directly (e.g. to record existing or past clients).
+    const closed = stage === "CLOSED" ? (closedAt ?? todayISO()) : null;
+    if (id) {
+      await db.update(clients).set({ ...v, stage, closedAt: closed }).where(eq(clients.id, id));
+    } else {
+      // A client added straight into a later stage has already been through the earlier checklists.
+      id = (await db.insert(clients).values({
+        ...v, stage, closedAt: closed,
+        onboarding: stage !== "ONBOARDING" ? allDone(ONBOARDING_ITEMS) : {},
+        closing: stage === "CLOSED" ? allDone(CLOSING_ITEMS) : {},
+      }).returning({ id: clients.id }))[0]!.id;
+    }
     revalidatePath("/", "layout");
     return { ok: true, id };
   });
