@@ -24,20 +24,36 @@ type Props = {
   readOnly?: boolean;
   onClose: () => void;
   footerExtra?: React.ReactNode;
+  /** Extra panel shown beside the form (e.g. comments), which makes the window wider. */
+  aside?: React.ReactNode;
+  /** Short text shown above the fields. */
+  intro?: React.ReactNode;
 };
 
-export function FormModal({ title, fields, initial = {}, onSubmit, onDelete, deleteLabel = "Delete", submitLabel = "Save", readOnly, onClose, footerExtra }: Props) {
+export function FormModal({ title, fields, initial = {}, onSubmit, onDelete, deleteLabel = "Delete", submitLabel = "Save", readOnly, onClose, footerExtra, aside, intro }: Props) {
   const [error, setError] = useState<string | null>(null);
   const [pending, start] = useTransition();
   const [confirmDel, setConfirmDel] = useState(false);
   const formRef = useRef<HTMLFormElement>(null);
+  const modalRef = useRef<HTMLDivElement>(null);
+  const dirty = useRef(false);
+  const [askDiscard, setAskDiscard] = useState(false);
+
+  /** Something typed but not saved: changed fields, or an unsent draft (any element marked data-draft) beside the form. */
+  const hasUnsaved = () => {
+    if (readOnly) return false;
+    const draft = modalRef.current?.querySelector<HTMLTextAreaElement | HTMLInputElement>("[data-draft]");
+    return dirty.current || !!draft?.value.trim();
+  };
+  const requestClose = useRef<() => void>(() => {});
+  requestClose.current = () => { if (hasUnsaved()) setAskDiscard(true); else onClose(); };
 
   useEffect(() => {
-    const k = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
+    const k = (e: KeyboardEvent) => { if (e.key === "Escape") { e.preventDefault(); requestClose.current(); } };
     document.addEventListener("keydown", k);
     formRef.current?.querySelector<HTMLElement>("input,select,textarea")?.focus();
     return () => document.removeEventListener("keydown", k);
-  }, [onClose]);
+  }, []);
 
   function collect(): Values {
     const fd = new FormData(formRef.current!);
@@ -63,7 +79,7 @@ export function FormModal({ title, fields, initial = {}, onSubmit, onDelete, del
     setError(null);
     start(async () => {
       const r = await onSubmit(v);
-      if (r.ok) onClose(); else setError(r.error);
+      if (r.ok) { dirty.current = false; onClose(); } else setError(r.error);
     });
   }
 
@@ -78,11 +94,17 @@ export function FormModal({ title, fields, initial = {}, onSubmit, onDelete, del
 
   const val = (n: string) => initial[n];
   return (
-    <div className="scrim open" onMouseDown={(e) => { if (e.target === e.currentTarget) onClose(); }}>
-      <div className={`modal ${pending ? "busy" : ""}`} role="dialog" aria-modal="true" aria-label={title}>
-        <h2>{title}</h2>
+    <div className="scrim open" onMouseDown={(e) => { if (e.target === e.currentTarget) requestClose.current(); }}>
+      <div ref={modalRef} className={`modal ${aside ? "wide" : ""} ${pending ? "busy" : ""}`} role="dialog" aria-modal="true" aria-label={title}>
+        <div className="mhead">
+          <h2>{title}</h2>
+          <button type="button" className="x" aria-label="Close" onClick={() => requestClose.current()}>×</button>
+        </div>
         {error ? <div className="err" role="alert">{error}</div> : null}
-        <form ref={formRef} className="form" onSubmit={submit} noValidate>
+        <div className="mbody">
+        <div className="mmain">
+        {intro}
+        <form ref={formRef} className="form" onSubmit={submit} noValidate onInput={() => { dirty.current = true; }} onChange={() => { dirty.current = true; }}>
           <fieldset disabled={readOnly} style={{ display: "contents" }}>
             {fields.map((f) => {
               const id = `fld-${f.name}`;
@@ -114,14 +136,27 @@ export function FormModal({ title, fields, initial = {}, onSubmit, onDelete, del
           </fieldset>
           <button type="submit" hidden />
         </form>
+        </div>
+        {aside ? <div className="maside">{aside}</div> : null}
+        </div>
+        {askDiscard ? (
+          <div className="mfoot">
+            <span className="discard">Discard what you’ve typed?</span>
+            <div className="r">
+              <button className="btn" type="button" autoFocus onClick={() => setAskDiscard(false)}>Keep editing</button>
+              <button className="btn danger-solid" type="button" onClick={onClose}>Discard</button>
+            </div>
+          </div>
+        ) : (
         <div className="mfoot">
           {readOnly ? <span className="fine">View only. Ask an admin to make changes.</span> : onDelete ? <button className="btn danger" onClick={del} type="button">{confirmDel ? "Click again to confirm" : deleteLabel}</button> : null}
           {footerExtra}
           <div className="r">
-            <button className="btn" type="button" onClick={onClose}>{readOnly ? "Close" : "Cancel"}</button>
+            <button className="btn" type="button" onClick={() => requestClose.current()}>{readOnly ? "Close" : "Cancel"}</button>
             {!readOnly && onSubmit ? <button className="btn primary" type="button" onClick={() => formRef.current?.requestSubmit()}>{pending ? "Saving…" : submitLabel}</button> : null}
           </div>
         </div>
+        )}
       </div>
     </div>
   );

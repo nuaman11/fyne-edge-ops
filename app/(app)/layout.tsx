@@ -3,7 +3,8 @@ import { requireUser } from "@/lib/auth";
 import { db, tickets, clients, deals } from "@/lib/db";
 import { listHiring } from "@/lib/queries";
 import { hiringStatus } from "@/lib/types";
-import { Sidebar } from "@/components/Sidebar";
+import { Sidebar, type NavGroup } from "@/components/Sidebar";
+import { GlobalSearch } from "@/components/GlobalSearch";
 import { Toaster } from "@/components/Toaster";
 
 export const dynamic = "force-dynamic";
@@ -16,20 +17,29 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     db.select({ n: count() }).from(deals).where(notInArray(deals.stage, ["WON", "LOST"])),
     listHiring(),
   ]);
-  const items = [
-    { href: "/", label: "Overview" },
-    { href: "/tickets", label: "Tickets", count: t!.n },
-    { href: "/calendar", label: "Calendar" },
-    { href: "/clients", label: "Clients", count: c!.n },
-    { href: "/hiring", label: "Hiring approvals", count: hiring.filter((h) => hiringStatus(h) === "pending").length },
-    { href: "/pipeline", label: "Pipeline", count: d!.n },
-    ...(me.role === "ADMIN" ? [{ href: "/users", label: "Users" }] : []),
-    { href: "/account", label: "My account" },
+  const groups: NavGroup[] = [
+    { label: "Workspace", items: [
+      { href: "/", label: "Overview", icon: "home" },
+      { href: "/tickets", label: "Tickets", icon: "ticket", count: t!.n },
+      { href: "/calendar", label: "Calendar", icon: "cal" },
+    ] },
+    { label: "Sales & delivery", items: [
+      { href: "/pipeline", label: "Pipeline", icon: "funnel", count: d!.n },
+      { href: "/clients", label: "Clients", icon: "brief", count: c!.n },
+    ] },
+    { label: "People", items: [
+      { href: "/hiring", label: "Hiring approvals", icon: "hire", count: hiring.filter((h) => hiringStatus(h) === "pending").length },
+      ...(me.role === "ADMIN" ? [{ href: "/users", label: "Users", icon: "users" }] : []),
+      { href: "/account", label: "My account", icon: "user" },
+    ] },
   ];
   return (
     <div className="app">
-      <Sidebar items={items} me={{ name: me.name, role: me.role }} />
-      <main className="main">{children}</main>
+      <Sidebar groups={groups} me={{ name: me.name, role: me.role, isDeptHead: me.isDeptHead }} />
+      <main className="main">
+        <div className="topbar"><GlobalSearch /></div>
+        <div className="view">{children}</div>
+      </main>
       <Toaster />
     </div>
   );

@@ -5,14 +5,14 @@ import { decideHiring, deleteHiring, saveHiring, undoHiringDecision } from "@/ap
 import { DEPARTMENTS } from "@/lib/constants";
 import { fmtDate } from "@/lib/format";
 import { canApproveDept, hiringStatus, type HiringRow, type Me, type UserLite } from "@/lib/types";
-import { PageHead, Pill } from "@/components/ui";
+import { EmptyState, PageHead, Pill } from "@/components/ui";
 import { FormModal, type Field } from "@/components/FormModal";
 import { toast } from "@/components/Toaster";
 
 const TABS = [["pending", "Awaiting approval"], ["approved", "Approved"], ["rejected", "Rejected"]] as const;
 
-export function HiringView({ me, hiring, users }: { me: Me; hiring: HiringRow[]; users: UserLite[] }) {
-  const [tab, setTab] = useState<(typeof TABS)[number][0]>("pending");
+export function HiringView({ me, hiring, users, initialTab }: { me: Me; hiring: HiringRow[]; users: UserLite[]; initialTab?: string }) {
+  const [tab, setTab] = useState<(typeof TABS)[number][0]>(TABS.find(([k]) => k === initialTab)?.[0] ?? "pending");
   const [editing, setEditing] = useState<Partial<HiringRow> | null>(null);
   const [pending, start] = useTransition();
   const isAdmin = me.role === "ADMIN";
@@ -39,7 +39,14 @@ export function HiringView({ me, hiring, users }: { me: Me; hiring: HiringRow[];
       <div className="tabs">
         {TABS.map(([k, l]) => <button key={k} className={k === tab ? "on" : ""} onClick={() => setTab(k)}>{l}<span className="n">{hiring.filter((h) => hiringStatus(h) === k).length}</span></button>)}
       </div>
-      {!list.length ? <div className="empty">Nothing here.</div> : (
+      {!list.length ? (
+        tab === "pending" ? (
+          <EmptyState title="No hiring requests waiting" actions={isAdmin ? <button className="btn primary" onClick={() => setEditing({ department: "Engineering", requiredDepartments: ["Engineering", "HR", "Finance", "Management"] })}>+ Add your first hiring request</button> : undefined}>
+            {isAdmin ? "Raise a request for a new hire and pick which departments must sign off. Each head approves it here." : "When an admin raises a hiring request, it appears here for department sign-off."}
+          </EmptyState>
+        ) : tab === "approved" ? <EmptyState title="No approved hires yet">A hire lands here once every required department has approved it.</EmptyState>
+          : <EmptyState title="No rejected requests">If any department rejects a hire, it moves here with who decided and when.</EmptyState>
+      ) : (
         <div className={`cards ${pending ? "busy" : ""}`}>
           {list.map((h) => {
             const st = hiringStatus(h);

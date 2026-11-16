@@ -108,9 +108,31 @@ export const deals = pgTable("deals", {
   nextAction: text("next_action"),
   notes: text("notes"),
   clientId: text("client_id").references(() => clients.id, { onDelete: "set null" }),
+  /** Why a deal was lost (LOST_REASONS key). Only set while the stage is LOST. */
+  lostReason: text("lost_reason"),
+  lostNote: text("lost_note"),
   createdAt: createdAt(),
   updatedAt: updatedAt(),
 });
+
+/** Comments people leave on a ticket. */
+export const ticketComments = pgTable("ticket_comments", {
+  id: id(),
+  ticketId: text("ticket_id").notNull().references(() => tickets.id, { onDelete: "cascade" }),
+  authorId: text("author_id").references(() => users.id, { onDelete: "set null" }),
+  body: text("body").notNull(),
+  createdAt: createdAt(),
+}, (t) => [index("ticket_comments_ticket_idx").on(t.ticketId)]);
+
+/** Activity log: who changed what on a ticket, and when. */
+export const ticketEvents = pgTable("ticket_events", {
+  id: id(),
+  ticketId: text("ticket_id").notNull().references(() => tickets.id, { onDelete: "cascade" }),
+  actorId: text("actor_id").references(() => users.id, { onDelete: "set null" }),
+  /** Human-readable change, e.g. "moved it from To do to In progress". */
+  detail: text("detail").notNull(),
+  createdAt: createdAt(),
+}, (t) => [index("ticket_events_ticket_idx").on(t.ticketId)]);
 
 export const clientsRelations = relations(clients, ({ many }) => ({ developers: many(clientDevelopers) }));
 export const clientDevelopersRelations = relations(clientDevelopers, ({ one }) => ({
@@ -128,3 +150,5 @@ export type Ticket = typeof tickets.$inferSelect;
 export type Deal = typeof deals.$inferSelect;
 export type HiringRequest = typeof hiringRequests.$inferSelect;
 export type HiringApproval = typeof hiringApprovals.$inferSelect;
+export type TicketComment = typeof ticketComments.$inferSelect;
+export type TicketEvent = typeof ticketEvents.$inferSelect;

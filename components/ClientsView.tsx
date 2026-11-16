@@ -2,21 +2,34 @@
 
 import { useEffect, useState, useTransition } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { assignDevelopers, deleteClient, saveClient, setClientStage, toggleChecklist } from "@/app/actions/clients";
 import { CLIENT_STAGES, CLOSING_ITEMS, ONBOARDING_ITEMS, SERVICES, label, type ClientStage } from "@/lib/constants";
-import { aed, fmtDate, todayISO } from "@/lib/format";
+import { aed, fmtDate, plural, todayISO } from "@/lib/format";
 import type { ClientRow, UserLite } from "@/lib/types";
-import { Avatar, Bar, PageHead, Pill } from "@/components/ui";
+import { Avatar, Bar, EmptyState, PageHead, Pill } from "@/components/ui";
+import { ResolveTicketsModal, type ResolveTicket } from "@/components/ResolveTicketsModal";
+
+export type OpenTicket = ResolveTicket & { clientId: string | null };
 import { FormModal, type Field } from "@/components/FormModal";
 import { toast } from "@/components/Toaster";
 
-export function ClientsView({ isAdmin, clients, users, openByClient }: {
-  isAdmin: boolean; clients: ClientRow[]; users: UserLite[]; openByClient: Record<string, number>;
+export function ClientsView({ isAdmin, clients, users, openByClient, initial }: {
+  isAdmin: boolean; clients: ClientRow[]; users: UserLite[]; openByClient: Record<string, OpenTicket[]>;
+  initial: { tab?: string; openId?: string; newClient?: boolean };
 }) {
+  const router = useRouter();
   const [rows, setRows] = useState(clients);
   useEffect(() => setRows(clients), [clients]);
-  const [tab, setTab] = useState<ClientStage>("ONBOARDING");
-  const [editing, setEditing] = useState<Partial<ClientRow> | null>(null);
+  const opened = initial.openId ? clients.find((c) => c.id === initial.openId) : undefined;
+  const [tab, setTab] = useState<ClientStage>(
+    opened?.stage ?? (CLIENT_STAGES.some(([k]) => k === initial.tab) ? (initial.tab as ClientStage) : "ONBOARDING"),
+  );
+  const [editing, setEditing] = useState<Partial<ClientRow> | null>(
+    opened ?? (initial.newClient && isAdmin ? { startDate: todayISO(), service: "Website", stage: "ONBOARDING" } : null),
+  );
+  const [resolving, setResolving] = useState<{ client: ClientRow; closeAfter: boolean } | null>(null);
+  const closeEditor = () => { setEditing(null); if (initial.openId || initial.newClient) router.replace("/clients"); };
   const [assigning, setAssigning] = useState<ClientRow | null>(null);
   const [, start] = useTransition();
   const userById = new Map(users.map((u) => [u.id, u]));
@@ -61,7 +74,8 @@ export function ClientsView({ isAdmin, clients, users, openByClient }: {
   );
 
   function cardBody(c: ClientRow) {
-    const open = openByClient[c.id] ?? 0;
+    const openList = openByClient[c.id] ?? [];
+    const open = openList.length;
     if (c.stage === "ONBOARDING") {
       const ready = ONBOARDING_ITEMS.every(([k]) => c.onboarding[k]) && c.developerIds.length > 0;
       return { body: <>{checklist(c, "onboarding")}{devBlock(c)}</>, foot: isAdmin ? <>
@@ -69,16 +83,17 @@ export function ClientsView({ isAdmin, clients, users, openByClient }: {
         <button className="btn sm primary" disabled={!ready} title={ready ? "" : "Finish the checklist and assign at least one developer"} onClick={() => act(() => setClientStage(c.id, "ACTIVE"))}>Mark active</button>
       </> : null };
     }
-    if (c.stage === "ACTIVE") return { body: <>{devBlock(c)}<div className="toolbar"><Pill>{open} open ticket{open === 1 ? "" : "s"}</Pill>{c.startDate ? <Pill>Since {fmtDate(c.startDate, true)}</Pill> : null}</div></>, foot: <>
+    if (c.stage === "ACTIVE") return { body: <>{devBlock(c)}<div className="toolbar"><Pill>{plural(open, "open ticket")}</Pill>{c.startDate ? <Pill>Since {fmtDate(c.startDate, true)}</Pill> : null}</div></>, foot: <>
       {isAdmin ? <button className="btn sm" onClick={() => setAssigning(c)}>Assign developers</button> : null}
       <Link className="btn sm" href={`/tickets?client=${c.id}`}>View tickets</Link>
       {isAdmin ? <button className="btn sm primary" onClick={() => act(() => setClientStage(c.id, "CLOSING"))}>Start closing</button> : null}
     </> };
     if (c.stage === "CLOSING") {
       const ready = CLOSING_ITEMS.every(([k]) => c.closing[k]);
-      return { body: <>{checklist(c, "closing")}{open ? <div className="notice">{open} ticket{open > 1 ? "s are" : " is"} still open for this client.</div> : null}</>, foot: isAdmin ? <>
+      return { body: <>{checklist(c, "closing")}{open ? <div className="notice"><span>{plural(open, "ticket")} still open for this client.</span>{isAdmin ? <button className="btn sm" onClick={() => setResolving({ client: c, closeAfter: false })}>Sort them out</button> : null}</div> : null}</>, foot: isAdmin ? <>
         <button className="btn sm ghost" onClick={() => act(() => setClientStage(c.id, "ACTIVE"))}>Back to active</button>
-        <button className="btn sm primary" disabled={!ready} title={ready ? "" : "Complete the closing checklist first"} onClick={() => act(() => setClientStage(c.id, "CLOSED"))}>Close client</button>
+        <button className="btn sm primary" disabled={!ready} title={ready ? "" : "Complete the closing checklist first"}
+          onClick={() => (open ? setResolving({ client: c, closeAfter: true }) : act(() => setClientStage(c.id, "CLOSED")))}>Close client</button>
       </> : null };
     }
     return { body: <div className="toolbar"><Pill tone="ok">Closed {fmtDate(c.closedAt, true)}</Pill><div className="avs">{c.developerIds.map((id) => <Avatar key={id} user={userById.get(id)} />)}</div></div>,
@@ -86,6 +101,24 @@ export function ClientsView({ isAdmin, clients, users, openByClient }: {
   }
 
   const list = rows.filter((c) => c.stage === tab);
+  const has = (st: ClientStage) => rows.some((c) => c.stage === st);
+  function emptyFor(st: ClientStage) {
+    if (st === "ONBOARDING") return (
+      <EmptyState title="No clients being onboarded" actions={isAdmin ? <>
+        <button className="btn primary" onClick={() => setEditing({ startDate: todayISO(), service: "Website", stage: "ONBOARDING" })}>+ New client</button>
+        <Link className="btn" href="/pipeline">Open pipeline</Link></> : undefined}>
+        {isAdmin ? "Add a client yourself, or win a deal in the Pipeline and convert it. Each new client starts here with an onboarding checklist." : "New clients appear here with their onboarding checklist once an admin adds them."}
+      </EmptyState>);
+    if (st === "ACTIVE") return (
+      <EmptyState title="No active clients" actions={has("ONBOARDING") ? <button className="btn" onClick={() => setTab("ONBOARDING")}>See onboarding</button> : undefined}>
+        A client moves here once its onboarding checklist is complete and at least one developer is assigned.
+      </EmptyState>);
+    if (st === "CLOSING") return (
+      <EmptyState title="Nobody is closing right now" actions={has("ACTIVE") ? <button className="btn" onClick={() => setTab("ACTIVE")}>See active clients</button> : undefined}>
+        When a project is wrapping up, press Start closing on an active client to run the closing checklist.
+      </EmptyState>);
+    return <EmptyState title="No closed clients yet">Finished projects are kept here for reference, and you can reopen them if work restarts.</EmptyState>;
+  }
   const fields: Field[] = [
     { name: "name", label: "Client / company name", type: "text", full: true, required: true },
     { name: "contactName", label: "Contact person", type: "text" },
@@ -108,17 +141,23 @@ export function ClientsView({ isAdmin, clients, users, openByClient }: {
       <div className="tabs">
         {CLIENT_STAGES.map(([k, l]) => <button key={k} className={k === tab ? "on" : ""} onClick={() => setTab(k)}>{l}<span className="n">{rows.filter((c) => c.stage === k).length}</span></button>)}
       </div>
-      {!list.length ? <div className="empty">No clients in {label(CLIENT_STAGES, tab).toLowerCase()}.{tab === "ONBOARDING" && isAdmin ? " Add one, or convert a won deal from the Pipeline." : ""}</div> : (
+      {!list.length ? emptyFor(tab) : (
         <div className="cards">
           {list.map((c) => {
             const { body, foot } = cardBody(c);
             const lead = c.leadId ? userById.get(c.leadId) : null;
             return (
               <article className="rec" key={c.id}>
+                <ol className="stepper" aria-label={`Stage: ${label(CLIENT_STAGES, c.stage)}`}>
+                  {CLIENT_STAGES.map(([k, l], j) => {
+                    const i = CLIENT_STAGES.findIndex(([x]) => x === c.stage);
+                    return <li key={k} className={j < i || c.stage === "CLOSED" ? "past" : j === i ? "now" : ""}>{l}</li>;
+                  })}
+                </ol>
                 <div className="hd">
                   <div><h3>{c.name}</h3><div className="sub">{c.service}{c.contactName ? ` · ${c.contactName}` : ""}{lead ? ` · Lead ${lead.name}` : ""}</div></div>
                   <div style={{ textAlign: "right" }}>
-                    <div style={{ fontWeight: 600, fontVariantNumeric: "tabular-nums" }}>{c.value ? aed(c.value) : ""}</div>
+                    <div className="val">{c.value ? aed(c.value) : ""}</div>
                     <button className="btn sm ghost" onClick={() => setEditing(c)}>{isAdmin ? "Edit" : "Details"}</button>
                   </div>
                 </div>
@@ -133,7 +172,7 @@ export function ClientsView({ isAdmin, clients, users, openByClient }: {
       {editing ? (
         <FormModal title={editing.id ? (isAdmin ? "Edit client" : editing.name!) : "New client"} fields={fields} initial={editing} readOnly={!isAdmin}
           onSubmit={async (v) => { const r = await saveClient(editing.id ?? null, v); if (r.ok) setTab(v.stage as ClientStage); return r; }}
-          onDelete={editing.id && isAdmin ? () => deleteClient(editing.id!) : undefined} onClose={() => setEditing(null)} />
+          onDelete={editing.id && isAdmin ? () => deleteClient(editing.id!) : undefined} onClose={closeEditor} />
       ) : null}
       {assigning ? (
         <FormModal title={`Assign developers · ${assigning.name}`} submitLabel="Save assignment"
@@ -143,6 +182,10 @@ export function ClientsView({ isAdmin, clients, users, openByClient }: {
           }), help: devPool.length ? undefined : "Add users in the Engineering or Design department first." }]}
           initial={{ devs: assigning.developerIds }}
           onSubmit={(v) => assignDevelopers(assigning.id, v.devs as string[])} onClose={() => setAssigning(null)} />
+      ) : null}
+      {resolving ? (
+        <ResolveTicketsModal client={resolving.client} tickets={openByClient[resolving.client.id] ?? []} users={users} closeAfter={resolving.closeAfter}
+          onClose={() => setResolving(null)} />
       ) : null}
     </>
   );

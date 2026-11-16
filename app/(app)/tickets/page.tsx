@@ -14,7 +14,7 @@ export default async function TicketsPage({ searchParams }: { searchParams: Prom
       tickets={tickets}
       users={users}
       clients={clients.map((c) => ({ id: c.id, name: c.name, stage: c.stage }))}
-      initial={{ newTicket: sp.new === "1", openId: sp.open, mine: sp.mine === "1", clientId: sp.client, due: sp.due }}
+      initial={{ newTicket: sp.new === "1", openId: sp.open, mine: sp.mine === "1", clientId: sp.client, due: sp.due, filter: sp.filter, assigneeId: sp.assignee }}
     />
   );
 }

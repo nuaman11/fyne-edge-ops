@@ -73,6 +73,13 @@ npm run db:migrate
 npm run dev                 # http://localhost:3000
 ```
 
+## Ticket comments, activity and lost deals
+
+- Every ticket has **Comments** and an **Activity** log (who changed status, assignee, priority, due date or client, and when). Changes made before this feature existed aren't in the log.
+- Ticket numbers come from a database sequence, so two people creating tickets at the same time never get the same number.
+- Moving a deal to **Lost** asks for a reason; the Pipeline page shows a "Why deals are lost" summary.
+- Closing a client that still has open tickets asks, per ticket, to mark it done or keep it open and reassign it.
+
 ## Changing the database schema
 
 Edit `lib/db/schema.ts`, then:
