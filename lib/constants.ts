@@ -6,6 +6,17 @@ export const PRIORITIES = [["LOW", "Low"], ["MEDIUM", "Medium"], ["HIGH", "High"
 export const CLIENT_STAGES = [["ONBOARDING", "Onboarding"], ["ACTIVE", "Active"], ["CLOSING", "Closing"], ["CLOSED", "Closed"]] as const;
 export const DEAL_STAGES = [["LEAD", "Lead"], ["CONTACTED", "Contacted"], ["PROPOSAL", "Proposal sent"], ["NEGOTIATION", "Negotiation"], ["WON", "Won"], ["LOST", "Lost"]] as const;
 
+export const LOST_REASONS = [
+  ["price", "Price too high"],
+  ["budget", "No budget"],
+  ["timing", "Timing / not ready"],
+  ["competitor", "Went with another agency"],
+  ["noreply", "Stopped responding"],
+  ["scope", "Not a fit for our services"],
+  ["other", "Other"],
+] as const;
+export type LostReason = (typeof LOST_REASONS)[number][0];
+
 export const ONBOARDING_ITEMS = [
   ["contract", "Contract signed"],
   ["deposit", "Deposit received"],

@@ -5,7 +5,7 @@ export type UserLite = { id: string; name: string; role: "ADMIN" | "USER"; depar
 export type UserAdminRow = UserLite & { email: string; lastLoginAt: string | null; createdAt: string };
 export type TicketRow = {
   id: string; number: number; title: string; description: string | null; status: TicketStatus; priority: Priority;
-  dueDate: string | null; clientId: string | null; assigneeId: string | null; createdById: string | null;
+  dueDate: string | null; clientId: string | null; assigneeId: string | null; createdById: string | null; commentCount: number;
 };
 export type ClientRow = {
   id: string; name: string; contactName: string | null; phone: string | null; email: string | null; service: string; value: number;
@@ -15,6 +15,7 @@ export type ClientRow = {
 export type DealRow = {
   id: string; company: string; contactName: string | null; service: string; value: number; stage: DealStage;
   expectedClose: string | null; source: string | null; nextAction: string | null; notes: string | null; clientId: string | null;
+  lostReason: string | null; lostNote: string | null;
 };
 export type HiringRow = {
   id: string; candidate: string; position: string; department: string; startDate: string | null; notes: string | null;
@@ -32,3 +33,9 @@ export function hiringStatus(h: Pick<HiringRow, "requiredDepartments" | "approva
 export function canApproveDept(me: Pick<Me, "role" | "department" | "isDeptHead">, dept: string) {
   return me.role === "ADMIN" || (me.isDeptHead && me.department === dept);
 }
+
+export type TicketThread = {
+  createdAt: string; createdById: string | null;
+  comments: { id: string; authorId: string | null; body: string; createdAt: string }[];
+  events: { id: string; actorId: string | null; detail: string; createdAt: string }[];
+};

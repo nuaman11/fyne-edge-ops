@@ -21,8 +21,11 @@ function ago(iso: string | null) {
   return new Date(iso).toLocaleString("en-GB", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
 }
 
-export function UsersView({ meId, users }: { meId: string; users: Row[] }) {
-  const [mode, setMode] = useState<{ kind: "new" } | { kind: "edit"; u: Row } | { kind: "reset"; u: Row } | null>(null);
+export function UsersView({ meId, users, openId }: { meId: string; users: Row[]; openId?: string }) {
+  const [mode, setMode] = useState<{ kind: "new" } | { kind: "edit"; u: Row } | { kind: "reset"; u: Row } | null>(() => {
+    const u = openId ? users.find((x) => x.id === openId) : undefined;
+    return u ? { kind: "edit", u } : null;
+  });
   const [q, setQ] = useState("");
 
   const profileFields: Field[] = [

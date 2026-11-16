@@ -1,9 +1,10 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { eq, inArray } from "drizzle-orm";
+import { and, eq, inArray, ne } from "drizzle-orm";
 import { z } from "zod";
-import { db, clients, clientDevelopers, users } from "@/lib/db";
+import { db, clients, clientDevelopers, users, tickets } from "@/lib/db";
+import { updateTicketLogged } from "@/lib/ticket-log";
 import { CLOSING_ITEMS, ONBOARDING_ITEMS, SERVICES } from "@/lib/constants";
 import { todayISO } from "@/lib/format";
 import { actor, adminActor, AppError, run, reqStr, optStr, optDate, optId, money, type ActionResult } from "@/lib/action";
@@ -94,6 +95,39 @@ export async function setClientStage(clientId: string, stage: string): Promise<A
     if (s === "CLOSED" && !CLOSING_ITEMS.every(([k]) => c.closing?.[k]))
       throw new AppError("Complete the closing checklist before closing this client.");
     await db.update(clients).set({ stage: s, closedAt: s === "CLOSED" ? todayISO() : null }).where(eq(clients.id, clientId));
+    revalidatePath("/", "layout");
+  });
+}
+
+const ticketPlan = z.array(z.object({
+  ticketId: z.string(),
+  action: z.enum(["done", "keep"]),
+  assigneeId: optId,
+})).max(500);
+
+/**
+ * Sorts out a client's open tickets (mark done, or keep open and reassign), and optionally closes the client.
+ * Runs in one transaction, so nothing changes unless everything succeeds.
+ */
+export async function resolveClientTickets(clientId: string, plan: unknown, closeAfter: boolean): Promise<ActionResult> {
+  return run(async () => {
+    const me = await adminActor();
+    const items = ticketPlan.parse(plan);
+    const [c] = await db.select().from(clients).where(eq(clients.id, clientId)).limit(1);
+    if (!c) throw new AppError("Client not found.");
+    if (closeAfter && !CLOSING_ITEMS.every(([k]) => c.closing?.[k]))
+      throw new AppError("Complete the closing checklist before closing this client.");
+    const open = await db.select({ id: tickets.id }).from(tickets).where(and(eq(tickets.clientId, clientId), ne(tickets.status, "DONE")));
+    const openIds = new Set(open.map((t) => t.id));
+    if (closeAfter && open.some((t) => !items.find((i) => i.ticketId === t.id)))
+      throw new AppError("A new ticket was added for this client. Reopen this window and try again.");
+    await db.transaction(async (tx) => {
+      for (const i of items) {
+        if (!openIds.has(i.ticketId)) continue;
+        await updateTicketLogged(tx, i.ticketId, me.id, i.action === "done" ? { status: "DONE" } : { assigneeId: i.assigneeId });
+      }
+      if (closeAfter) await tx.update(clients).set({ stage: "CLOSED", closedAt: todayISO() }).where(eq(clients.id, clientId));
+    });
     revalidatePath("/", "layout");
   });
 }

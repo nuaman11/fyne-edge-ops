@@ -1,6 +1,6 @@
 import "server-only";
 import { asc, count, desc } from "drizzle-orm";
-import { db, users, tickets, clients, clientDevelopers, deals, hiringRequests, hiringApprovals } from "@/lib/db";
+import { db, users, tickets, clients, clientDevelopers, deals, hiringRequests, hiringApprovals, ticketComments } from "@/lib/db";
 import type { ClientRow, DealRow, HiringRow, TicketRow, UserLite } from "@/lib/types";
 
 export async function listUsers(): Promise<UserLite[]> {
@@ -11,10 +11,15 @@ export async function listUsers(): Promise<UserLite[]> {
 }
 
 export async function listTickets(): Promise<TicketRow[]> {
-  return db.select({
-    id: tickets.id, number: tickets.number, title: tickets.title, description: tickets.description, status: tickets.status,
-    priority: tickets.priority, dueDate: tickets.dueDate, clientId: tickets.clientId, assigneeId: tickets.assigneeId, createdById: tickets.createdById,
-  }).from(tickets).orderBy(desc(tickets.number));
+  const [rows, counts] = await Promise.all([
+    db.select({
+      id: tickets.id, number: tickets.number, title: tickets.title, description: tickets.description, status: tickets.status,
+      priority: tickets.priority, dueDate: tickets.dueDate, clientId: tickets.clientId, assigneeId: tickets.assigneeId, createdById: tickets.createdById,
+    }).from(tickets).orderBy(desc(tickets.number)),
+    db.select({ ticketId: ticketComments.ticketId, n: count() }).from(ticketComments).groupBy(ticketComments.ticketId),
+  ]);
+  const byTicket = new Map(counts.map((c) => [c.ticketId, c.n]));
+  return rows.map((t) => ({ ...t, commentCount: byTicket.get(t.id) ?? 0 }));
 }
 
 export async function listClients(): Promise<ClientRow[]> {
@@ -33,6 +38,7 @@ export async function listDeals(): Promise<DealRow[]> {
   return db.select({
     id: deals.id, company: deals.company, contactName: deals.contactName, service: deals.service, value: deals.value, stage: deals.stage,
     expectedClose: deals.expectedClose, source: deals.source, nextAction: deals.nextAction, notes: deals.notes, clientId: deals.clientId,
+    lostReason: deals.lostReason, lostNote: deals.lostNote,
   }).from(deals).orderBy(desc(deals.createdAt));
 }
 
