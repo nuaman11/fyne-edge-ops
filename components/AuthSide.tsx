@@ -5,7 +5,7 @@ export function AuthSide() {
     <div className="side">
       <Logo variant="auth" />
       <div>
-        <h1>FYNE EDGE Operations</h1>
+        <h1>FYNE EDGE <em>Operations</em></h1>
         <p>Tickets, client onboarding and closings, hiring approvals, and the sales pipeline in one place.</p>
       </div>
       <ul>

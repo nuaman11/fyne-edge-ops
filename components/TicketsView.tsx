@@ -152,13 +152,13 @@ export function TicketsView({ me, tickets, users, clients, initial }: {
             <tbody>
               {list.slice().sort((a, b) => Number(a.status === "DONE") - Number(b.status === "DONE") || (a.dueDate ?? "9").localeCompare(b.dueDate ?? "9")).map((t) => (
                 <tr key={t.id} onClick={() => setEditing(t)}>
-                  <td className="code">{ticketCode(t.number)}</td>
-                  <td>{t.title} {comments(t)}</td>
-                  <td>{t.clientId ? clientById.get(t.clientId)?.name : "Internal"}</td>
-                  <td>{t.assigneeId ? <span className="inl"><Avatar user={userById.get(t.assigneeId)} />{userById.get(t.assigneeId)?.name}</span> : <span className="code">Unassigned</span>}</td>
-                  <td><span className="inl"><PrioGlyph priority={t.priority} />{label(PRIORITIES, t.priority)}</span></td>
-                  <td><span className="inl"><span className={`dot ${t.status.toLowerCase()}`} />{label(TICKET_STATUSES, t.status)}</span></td>
-                  <td><DueChip due={t.dueDate} done={t.status === "DONE"} today={today} /></td>
+                  <td data-label="ID" className="code">{ticketCode(t.number)}</td>
+                  <td data-label="Title">{t.title} {comments(t)}</td>
+                  <td data-label="Client">{t.clientId ? clientById.get(t.clientId)?.name : "Internal"}</td>
+                  <td data-label="Assignee">{t.assigneeId ? <span className="inl"><Avatar user={userById.get(t.assigneeId)} />{userById.get(t.assigneeId)?.name}</span> : <span className="code">Unassigned</span>}</td>
+                  <td data-label="Priority"><span className="inl"><PrioGlyph priority={t.priority} />{label(PRIORITIES, t.priority)}</span></td>
+                  <td data-label="Status"><span className="inl"><span className={`dot ${t.status.toLowerCase()}`} />{label(TICKET_STATUSES, t.status)}</span></td>
+                  <td data-label="Due"><DueChip due={t.dueDate} done={t.status === "DONE"} today={today} /></td>
                 </tr>
               ))}
             </tbody>

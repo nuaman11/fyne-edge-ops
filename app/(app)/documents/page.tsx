@@ -61,11 +61,11 @@ export default async function DocumentsPage({ searchParams }: { searchParams: Pr
             <tbody>
               {list.map((d) => (
                 <tr key={d.id}>
-                  <td><Link className="rowlink" href={`/documents/${d.id}${tab === "mine" ? "/sign" : ""}`}>{d.title}</Link></td>
-                  <td>{d.clientId ? clientName.get(d.clientId) ?? "—" : "—"}</td>
-                  <td>{d.signers.length ? d.signers.map((s) => s.name.split(" ")[0]).join(", ") : <span className="fine">None yet</span>}</td>
-                  <td><DocStatusPill doc={d} meId={me.id} /></td>
-                  <td className="mono" style={{ fontSize: 12 }}>{fmtDate((d.completedAt ?? d.sentAt ?? d.createdAt).slice(0, 10))}</td>
+                  <td data-label="Document"><Link className="rowlink" href={`/documents/${d.id}${tab === "mine" ? "/sign" : ""}`}>{d.title}</Link></td>
+                  <td data-label="Client">{d.clientId ? clientName.get(d.clientId) ?? "—" : "—"}</td>
+                  <td data-label="Signers">{d.signers.length ? d.signers.map((s) => s.name.split(" ")[0]).join(", ") : <span className="fine">None yet</span>}</td>
+                  <td data-label="Status"><DocStatusPill doc={d} meId={me.id} /></td>
+                  <td data-label="Updated" className="mono" style={{ fontSize: 12 }}>{fmtDate((d.completedAt ?? d.sentAt ?? d.createdAt).slice(0, 10))}</td>
                 </tr>
               ))}
             </tbody>

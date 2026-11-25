@@ -6,6 +6,7 @@ import { hiringStatus } from "@/lib/types";
 import { Sidebar, type NavGroup } from "@/components/Sidebar";
 import { GlobalSearch } from "@/components/GlobalSearch";
 import { Toaster } from "@/components/Toaster";
+import Link from "next/link";
 
 export const dynamic = "force-dynamic";
 
@@ -40,7 +41,11 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     <div className="app">
       <Sidebar groups={groups} me={{ name: me.name, role: me.role, isDeptHead: me.isDeptHead }} />
       <main className="main">
-        <div className="topbar"><GlobalSearch /></div>
+        <div className="topbar">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <Link href="/" className="mbrand" aria-label="FYNE EDGE Ops home"><img src="/brand/logo-light.png" alt="FYNE EDGE" /></Link>
+          <GlobalSearch />
+        </div>
         <div className="view">{children}</div>
       </main>
       <Toaster />
