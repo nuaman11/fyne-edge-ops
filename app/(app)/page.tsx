@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { requireUser } from "@/lib/auth";
 import { listClients, listDeals, listHiring, listTickets, listUsers } from "@/lib/queries";
+import { listDocumentsFor } from "@/lib/documents";
 import { CLIENT_STAGES, DEAL_STAGES, TICKET_STATUSES, label } from "@/lib/constants";
 import { addDays, aed, plural, ticketCode, todayISO, TZ } from "@/lib/format";
 import { canApproveDept, hiringStatus } from "@/lib/types";
@@ -11,7 +12,7 @@ export const metadata = { title: "Overview" };
 
 export default async function Overview() {
   const me = await requireUser();
-  const [tickets, clients, deals, hiring, users] = await Promise.all([listTickets(), listClients(), listDeals(), listHiring(), listUsers()]);
+  const [tickets, clients, deals, hiring, users, docs] = await Promise.all([listTickets(), listClients(), listDeals(), listHiring(), listUsers(), listDocumentsFor(me)]);
   const today = todayISO();
   const week = addDays(today, 7);
   const userById = new Map(users.map((u) => [u.id, u]));
@@ -32,10 +33,12 @@ export default async function Overview() {
   const myHires = pending.filter((h) => h.requiredDepartments.some((d) => !h.approvals.some((a) => a.department === d) && canApproveDept(me, d)));
   const myClients = clients.filter((c) => c.stage !== "CLOSED" && (c.developerIds.includes(me.id) || c.leadId === me.id));
   const createdOpen = open.filter((t) => t.createdById === me.id && t.assigneeId !== me.id).length;
+  const toSign = docs.filter((x) => x.status === "OUT_FOR_SIGNATURE" && x.signers.some((s) => s.userId === me.id && s.status === "PENDING"));
   const showApprovals = me.role !== "ADMIN" ? me.isDeptHead : myHires.length > 0;
 
   const bits = [plural(mineT.length, "open ticket") + " assigned to you"];
   if (mineLate) bits.push(`${mineLate} overdue`);
+  if (toSign.length) bits.push(plural(toSign.length, "document") + " to sign");
   if (myHires.length) bits.push(plural(myHires.length, "hiring request") + " waiting on your sign-off");
   const hour = Number(new Intl.DateTimeFormat("en-GB", { hour: "numeric", hour12: false, timeZone: TZ }).format(new Date()));
   const hi = hour < 12 ? "Good morning" : hour < 17 ? "Good afternoon" : "Good evening";
@@ -86,6 +89,17 @@ export default async function Overview() {
               </Link>
             )) : <div className="empty">No open tickets assigned to you.</div>}
           </div>
+          {toSign.length ? <>
+            <div className="sh"><span>Waiting for my signature</span><span>{toSign.length}</span></div>
+            <div className="rows">
+              {toSign.slice(0, 5).map((x) => (
+                <Link className="row" key={x.id} href={`/documents/${x.id}/sign`}>
+                  <div className="grow"><div className="t">{x.title}</div><div className="s">{x.signers.filter((s) => s.status === "SIGNED").length} of {x.signers.length} signed so far</div></div>
+                  <Pill tone="warn">Sign</Pill>
+                </Link>
+              ))}
+            </div>
+          </> : null}
           {showApprovals ? <>
             <div className="sh"><span>Waiting on my sign-off</span><span>{myHires.length}</span></div>
             <div className="rows">

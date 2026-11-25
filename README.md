@@ -25,6 +25,8 @@ Internal operations app for FYNE EDGE: tickets, client onboarding and closings, 
 6. **Create your admin account.** Open your site. You'll be sent to `/setup` to create the first admin (name, email, password). The setup page locks itself as soon as one account exists.
 7. **Add your team.** Go to **Users → + Add user**. Choose **User** (limited) or **Admin** (full), set a temporary password and share it privately. They can change it under **My account**.
 
+8. **Connect file storage for Documents.** In the project: **Storage → Create → Blob** → create the store and **Connect** it to this project for all environments, then **Redeploy**. This sets `BLOB_READ_WRITE_TOKEN`. Files are stored as **private** blobs: nobody can open them by URL, every download goes through the app's sign-in check.
+
 Custom domain (for example `ops.fyneedge.com`): **Settings → Domains** in Vercel.
 
 ---
@@ -42,6 +44,10 @@ Custom domain (for example `ops.fyneedge.com`): **Settings → Domains** in Verc
 | Create hiring requests | ✓ | |
 | Approve or reject a hire for a department | Any department | Only their own department, and only if marked **Department head** |
 | View overview, calendar, clients, pipeline and hiring | ✓ | ✓ |
+| Upload documents and send them for signing | ✓ | ✓ |
+| Sign or decline documents sent to them | ✓ | ✓ |
+| See a document | All | Only ones they sent or must sign |
+| Void, duplicate or delete a document | Any | Only ones they sent (signed documents: admins only) |
 
 Every permission is checked **on the server** in `app/actions/*`, not just hidden in the interface.
 
@@ -79,6 +85,20 @@ npm run dev                 # http://localhost:3000
 - Ticket numbers come from a database sequence, so two people creating tickets at the same time never get the same number.
 - Moving a deal to **Lost** asks for a reason; the Pipeline page shows a "Why deals are lost" summary.
 - Closing a client that still has open tickets asks, per ticket, to mark it done or keep it open and reassign it.
+
+## Documents and e-signing
+
+**Documents** in the sidebar lets the team sign PDFs inside the app:
+
+1. **Upload** a PDF (up to 25 MB, 200 pages) and give it a title. Optionally link a client.
+2. **Prepare** it: add the team members who must sign, pick a box type (Signature, Initials, Date signed, Full name, Text) and click on the page to place it for the selected person. Drag to move, drag the corner to resize, press Delete to remove.
+3. **Send.** Each signer sees it under **Needs my signature**, on the Overview and as a count in the sidebar.
+4. **Sign.** Signers draw or type their signature, fill their boxes and confirm. Date signed and Full name fill in automatically. A signer can also **decline** with a reason, which voids the document.
+5. When the last person signs, the app creates the **signed PDF**: signatures are stamped onto the pages and a **signature certificate** page is added with each signer's name, email, time, IP address and device, plus the SHA-256 fingerprint of the original file.
+
+Every step (upload, send, open, sign, decline, void) is recorded in the document's activity. Voided or declined documents can be copied into a new draft with **Make a new version**. Completed documents are kept as records; only admins can delete them.
+
+This is a simple electronic signature with an audit trail, suitable for internal approvals, NDAs, offer letters and most commercial agreements. Some documents need a qualified or notarised signature by law; check before using it for those.
 
 ## Changing the database schema
 

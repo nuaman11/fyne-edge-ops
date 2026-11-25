@@ -39,3 +39,23 @@ export type TicketThread = {
   comments: { id: string; authorId: string | null; body: string; createdAt: string }[];
   events: { id: string; actorId: string | null; detail: string; createdAt: string }[];
 };
+
+export type DocSignerRow = {
+  id: string; userId: string | null; name: string; email: string; status: "PENDING" | "SIGNED" | "DECLINED";
+  signedAt: string | null; declinedAt: string | null; declineReason: string | null;
+};
+export type DocFieldRow = {
+  id: string; signerId: string; type: "SIGNATURE" | "INITIALS" | "DATE" | "NAME" | "TEXT";
+  page: number; x: number; y: number; w: number; h: number; required: boolean; label: string | null; value: string | null;
+};
+export type DocListRow = {
+  id: string; title: string; status: "DRAFT" | "OUT_FOR_SIGNATURE" | "COMPLETED" | "VOIDED";
+  clientId: string | null; createdById: string | null; createdAt: string; sentAt: string | null; completedAt: string | null;
+  signers: Pick<DocSignerRow, "userId" | "name" | "status">[];
+};
+export type DocDetail = Omit<DocListRow, "signers"> & {
+  message: string | null; fileName: string; fileSize: number; fileSha256: string; pageCount: number;
+  hasSignedFile: boolean; signedSha256: string | null; voidedAt: string | null; voidReason: string | null;
+  signers: DocSignerRow[]; fields: DocFieldRow[];
+  events: { id: string; actorId: string | null; detail: string; createdAt: string }[];
+};

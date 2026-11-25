@@ -66,6 +66,7 @@ const ICONS: Record<string, React.ReactNode> = {
   search: <><circle cx="11" cy="11" r="7" /><path d="M20 20l-4-4" /></>,
   check: <path d="M5 12l5 5 9-10" />,
   chat: <path d="M4 5h16v11H9l-5 4z" />,
+  doc: <><path d="M6 3h8l5 5v13H6z" /><path d="M14 3v5h5M9 17c1.5-2 2.5-2 3.5 0s2 2 3.5 0" /></>,
 };
 export function Icon({ name }: { name: keyof typeof ICONS | string }) {
   return <svg className="ico" viewBox="0 0 24 24" aria-hidden="true">{ICONS[name]}</svg>;
