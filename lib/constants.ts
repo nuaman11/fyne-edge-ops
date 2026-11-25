@@ -42,3 +42,21 @@ export type DealStage = (typeof DEAL_STAGES)[number][0];
 export function label(list: readonly (readonly [string, string])[], v: string | null | undefined) {
   return list.find((x) => x[0] === v)?.[1] ?? v ?? "";
 }
+
+export const DOCUMENT_STATUSES = [
+  ["DRAFT", "Draft"],
+  ["OUT_FOR_SIGNATURE", "Out for signature"],
+  ["COMPLETED", "Completed"],
+  ["VOIDED", "Voided"],
+] as const;
+export type DocumentStatus = (typeof DOCUMENT_STATUSES)[number][0];
+
+/** Field types a signer fills. Default sizes are in PDF points (1/72 inch). */
+export const FIELD_TYPES = [
+  ["SIGNATURE", "Signature", 170, 48],
+  ["INITIALS", "Initials", 64, 40],
+  ["DATE", "Date signed", 100, 20],
+  ["NAME", "Full name", 160, 20],
+  ["TEXT", "Text", 170, 20],
+] as const;
+export type FieldType = (typeof FIELD_TYPES)[number][0];

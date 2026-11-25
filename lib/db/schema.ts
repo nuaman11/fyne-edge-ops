@@ -1,5 +1,5 @@
 import {
-  pgTable, pgEnum, text, integer, boolean, timestamp, date, jsonb, serial, primaryKey, uniqueIndex, index,
+  pgTable, pgEnum, text, integer, boolean, timestamp, date, jsonb, serial, primaryKey, uniqueIndex, index, doublePrecision,
 } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
 
@@ -9,6 +9,9 @@ export const priorityEnum = pgEnum("priority", ["LOW", "MEDIUM", "HIGH", "URGENT
 export const clientStageEnum = pgEnum("client_stage", ["ONBOARDING", "ACTIVE", "CLOSING", "CLOSED"]);
 export const dealStageEnum = pgEnum("deal_stage", ["LEAD", "CONTACTED", "PROPOSAL", "NEGOTIATION", "WON", "LOST"]);
 export const decisionEnum = pgEnum("decision", ["APPROVED", "REJECTED"]);
+export const documentStatusEnum = pgEnum("document_status", ["DRAFT", "OUT_FOR_SIGNATURE", "COMPLETED", "VOIDED"]);
+export const signerStatusEnum = pgEnum("signer_status", ["PENDING", "SIGNED", "DECLINED"]);
+export const fieldTypeEnum = pgEnum("document_field_type", ["SIGNATURE", "INITIALS", "DATE", "NAME", "TEXT"]);
 
 const id = () => text("id").primaryKey().$defaultFn(() => crypto.randomUUID());
 const createdAt = () => timestamp("created_at", { withTimezone: true }).defaultNow().notNull();
@@ -134,6 +137,72 @@ export const ticketEvents = pgTable("ticket_events", {
   createdAt: createdAt(),
 }, (t) => [index("ticket_events_ticket_idx").on(t.ticketId)]);
 
+/** A PDF uploaded for signing. Files live in private Vercel Blob storage; only their storage path is kept here. */
+export const documents = pgTable("documents", {
+  id: id(),
+  title: text("title").notNull(),
+  message: text("message"),
+  clientId: text("client_id").references(() => clients.id, { onDelete: "set null" }),
+  status: documentStatusEnum("status").notNull().default("DRAFT"),
+  fileName: text("file_name").notNull(),
+  filePath: text("file_path").notNull(),
+  fileSize: integer("file_size").notNull(),
+  fileSha256: text("file_sha256").notNull(),
+  pageCount: integer("page_count").notNull(),
+  signedPath: text("signed_path"),
+  signedSha256: text("signed_sha256"),
+  createdById: text("created_by_id").references(() => users.id, { onDelete: "set null" }),
+  sentAt: timestamp("sent_at", { withTimezone: true }),
+  completedAt: timestamp("completed_at", { withTimezone: true }),
+  voidedAt: timestamp("voided_at", { withTimezone: true }),
+  voidReason: text("void_reason"),
+  createdAt: createdAt(),
+  updatedAt: updatedAt(),
+}, (t) => [index("documents_status_idx").on(t.status), index("documents_created_by_idx").on(t.createdById)]);
+
+/** A team member who must sign a document. Name and email are copied at send time for the audit page. */
+export const documentSigners = pgTable("document_signers", {
+  id: id(),
+  documentId: text("document_id").notNull().references(() => documents.id, { onDelete: "cascade" }),
+  userId: text("user_id").references(() => users.id, { onDelete: "set null" }),
+  name: text("name").notNull(),
+  email: text("email").notNull(),
+  status: signerStatusEnum("status").notNull().default("PENDING"),
+  signedAt: timestamp("signed_at", { withTimezone: true }),
+  declinedAt: timestamp("declined_at", { withTimezone: true }),
+  declineReason: text("decline_reason"),
+  ip: text("ip"),
+  userAgent: text("user_agent"),
+  createdAt: createdAt(),
+}, (t) => [index("document_signers_document_idx").on(t.documentId), index("document_signers_user_idx").on(t.userId)]);
+
+/** A box on a page that one signer fills. Position and size are fractions (0–1) of the page as displayed. */
+export const documentFields = pgTable("document_fields", {
+  id: id(),
+  documentId: text("document_id").notNull().references(() => documents.id, { onDelete: "cascade" }),
+  signerId: text("signer_id").notNull().references(() => documentSigners.id, { onDelete: "cascade" }),
+  type: fieldTypeEnum("type").notNull(),
+  page: integer("page").notNull(),
+  x: doublePrecision("x").notNull(),
+  y: doublePrecision("y").notNull(),
+  w: doublePrecision("w").notNull(),
+  h: doublePrecision("h").notNull(),
+  required: boolean("required").notNull().default(true),
+  label: text("label"),
+  value: text("value"),
+  filledAt: timestamp("filled_at", { withTimezone: true }),
+}, (t) => [index("document_fields_document_idx").on(t.documentId)]);
+
+/** Audit trail for a document: uploads, sends, views, signatures, declines, voids. */
+export const documentEvents = pgTable("document_events", {
+  id: id(),
+  documentId: text("document_id").notNull().references(() => documents.id, { onDelete: "cascade" }),
+  actorId: text("actor_id").references(() => users.id, { onDelete: "set null" }),
+  detail: text("detail").notNull(),
+  ip: text("ip"),
+  createdAt: createdAt(),
+}, (t) => [index("document_events_document_idx").on(t.documentId)]);
+
 export const clientsRelations = relations(clients, ({ many }) => ({ developers: many(clientDevelopers) }));
 export const clientDevelopersRelations = relations(clientDevelopers, ({ one }) => ({
   client: one(clients, { fields: [clientDevelopers.clientId], references: [clients.id] }),
@@ -152,3 +221,6 @@ export type HiringRequest = typeof hiringRequests.$inferSelect;
 export type HiringApproval = typeof hiringApprovals.$inferSelect;
 export type TicketComment = typeof ticketComments.$inferSelect;
 export type TicketEvent = typeof ticketEvents.$inferSelect;
+export type Document = typeof documents.$inferSelect;
+export type DocumentSigner = typeof documentSigners.$inferSelect;
+export type DocumentField = typeof documentFields.$inferSelect;

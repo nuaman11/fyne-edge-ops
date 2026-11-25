@@ -2,11 +2,12 @@
 
 import { desc, ilike, or, sql } from "drizzle-orm";
 import { db, tickets, clients, deals, users } from "@/lib/db";
+import { listDocumentsFor } from "@/lib/documents";
 import { actor } from "@/lib/action";
 import { CLIENT_STAGES, DEAL_STAGES, TICKET_STATUSES, label } from "@/lib/constants";
 import { aed, ticketCode } from "@/lib/format";
 
-export type SearchHit = { group: "Tickets" | "Clients" | "Leads" | "People"; title: string; sub: string; href: string };
+export type SearchHit = { group: "Tickets" | "Clients" | "Leads" | "People" | "Documents"; title: string; sub: string; href: string };
 
 /** One search box across tickets, clients, leads and people. */
 export async function searchEverything(query: string): Promise<SearchHit[]> {
@@ -17,7 +18,7 @@ export async function searchEverything(query: string): Promise<SearchHit[]> {
   const num = /^(fe-?)?(\d+)$/i.exec(q);
   const ticketNumber = num ? Number(num[2]) - (num[1] || Number(num[2]) > 100 ? 100 : 0) : null;
 
-  const [t, c, d, u] = await Promise.all([
+  const [t, c, d, u, docs] = await Promise.all([
     db.select({ id: tickets.id, number: tickets.number, title: tickets.title, status: tickets.status }).from(tickets)
       .where(or(ilike(tickets.title, like), ilike(tickets.description, like), ticketNumber && ticketNumber > 0 ? sql`${tickets.number} = ${ticketNumber}` : undefined))
       .orderBy(desc(tickets.number)).limit(6),
@@ -27,12 +28,16 @@ export async function searchEverything(query: string): Promise<SearchHit[]> {
       .where(or(ilike(deals.company, like), ilike(deals.contactName, like), ilike(deals.source, like))).limit(5),
     db.select({ id: users.id, name: users.name, department: users.department, jobTitle: users.jobTitle }).from(users)
       .where(or(ilike(users.name, like), ilike(users.department, like), ilike(users.jobTitle, like))).limit(5),
+    listDocumentsFor(me),
   ]);
+  const ql = q.toLowerCase();
+  const docHits = docs.filter((x) => x.title.toLowerCase().includes(ql)).slice(0, 5);
 
   return [
     ...t.map((x): SearchHit => ({ group: "Tickets", title: x.title, sub: `${ticketCode(x.number)} · ${label(TICKET_STATUSES, x.status)}`, href: `/tickets?open=${x.id}` })),
     ...c.map((x): SearchHit => ({ group: "Clients", title: x.name, sub: `${label(CLIENT_STAGES, x.stage)} · ${x.service}${x.contactName ? " · " + x.contactName : ""}`, href: `/clients?open=${x.id}` })),
     ...d.map((x): SearchHit => ({ group: "Leads", title: x.company, sub: `${label(DEAL_STAGES, x.stage)}${x.value ? " · " + aed(x.value) : ""}`, href: `/pipeline?open=${x.id}` })),
+    ...docHits.map((x): SearchHit => ({ group: "Documents", title: x.title, sub: x.status === "OUT_FOR_SIGNATURE" ? `Out for signature · ${x.signers.filter((s) => s.status === "SIGNED").length}/${x.signers.length} signed` : x.status === "COMPLETED" ? "Signed" : x.status === "DRAFT" ? "Draft" : "Voided", href: `/documents/${x.id}` })),
     ...u.map((x): SearchHit => ({
       group: "People", title: x.name, sub: `${x.jobTitle ? x.jobTitle + " · " : ""}${x.department}`,
       href: me.role === "ADMIN" ? `/users?open=${x.id}` : `/tickets?assignee=${x.id}`,
