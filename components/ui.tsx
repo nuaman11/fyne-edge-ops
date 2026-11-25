@@ -11,7 +11,7 @@ export function Pill({ tone, children, title }: { tone?: "ok" | "warn" | "bad" |
   return <span className={`pill ${tone ?? ""}`} title={title}>{children}</span>;
 }
 
-export function PageHead({ title, sub, eyebrow, children }: { title: string; sub?: React.ReactNode; eyebrow?: React.ReactNode; children?: React.ReactNode }) {
+export function PageHead({ title, sub, eyebrow, children }: { title: React.ReactNode; sub?: React.ReactNode; eyebrow?: React.ReactNode; children?: React.ReactNode }) {
   return (
     <div className="top">
       <div>{eyebrow ? <div className="eyebrow">{eyebrow}</div> : null}<h1>{title}</h1>{sub ? <p>{sub}</p> : null}</div>

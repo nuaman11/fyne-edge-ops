@@ -61,7 +61,7 @@ export default async function Overview() {
   return (
     <>
       <div className="greet">
-        <PageHead title={`${hi}, ${me.name.split(" ")[0]}`} eyebrow={dateLine} sub={bits.join(", ") + "."}>
+        <PageHead title={<>{hi}, <em>{me.name.split(" ")[0]}</em></>} eyebrow={dateLine} sub={bits.join(", ") + "."}>
           <Link className="btn primary" href="/tickets?new=1">+ New ticket</Link>
         </PageHead>
       </div>

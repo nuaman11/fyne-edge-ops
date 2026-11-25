@@ -52,12 +52,12 @@ export function UsersView({ meId, users, openId }: { meId: string; users: Row[];
           <tbody>
             {list.map((u) => (
               <tr key={u.id} onClick={() => setMode({ kind: "edit", u })}>
-                <td><span style={{ display: "inline-flex", gap: 8, alignItems: "center" }}><Avatar user={u} />{u.name}{u.id === meId ? <span className="code">(you)</span> : null}</span></td>
-                <td>{u.email}</td>
-                <td><Pill tone={u.role === "ADMIN" ? "acc" : undefined}>{u.role === "ADMIN" ? "Admin" : "User"}</Pill></td>
-                <td>{u.department}{u.isDeptHead ? <> <Pill tone="acc">Head</Pill></> : null}{u.jobTitle ? <div className="fine">{u.jobTitle}</div> : null}</td>
-                <td className="fine">{ago(u.lastLoginAt)}</td>
-                <td>{!u.active ? <Pill tone="bad">Disabled</Pill> : u.locked ? <Pill tone="warn">Locked</Pill> : <Pill tone="ok">Active</Pill>}</td>
+                <td data-label="Name"><span style={{ display: "inline-flex", gap: 8, alignItems: "center" }}><Avatar user={u} />{u.name}{u.id === meId ? <span className="code">(you)</span> : null}</span></td>
+                <td data-label="Email">{u.email}</td>
+                <td data-label="Access"><Pill tone={u.role === "ADMIN" ? "acc" : undefined}>{u.role === "ADMIN" ? "Admin" : "User"}</Pill></td>
+                <td data-label="Department">{u.department}{u.isDeptHead ? <> <Pill tone="acc">Head</Pill></> : null}{u.jobTitle ? <div className="fine">{u.jobTitle}</div> : null}</td>
+                <td data-label="Last sign-in" className="fine">{ago(u.lastLoginAt)}</td>
+                <td data-label="Status">{!u.active ? <Pill tone="bad">Disabled</Pill> : u.locked ? <Pill tone="warn">Locked</Pill> : <Pill tone="ok">Active</Pill>}</td>
               </tr>
             ))}
             {!list.length ? <tr><td colSpan={6} className="empty">No users match.</td></tr> : null}

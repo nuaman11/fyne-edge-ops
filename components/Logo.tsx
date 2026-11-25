@@ -5,11 +5,9 @@ import { useEffect, useRef, useState } from "react";
 /**
  * FYNE EDGE logo (icon + wordmark).
  *  - public/brand/logo-light.png  white text, for dark backgrounds
- *  - public/brand/logo-dark.png   dark text, for light backgrounds
  * Falls back to the "FE" mark if the files are missing.
  */
 const LIGHT_TEXT = "/brand/logo-light.png";
-const DARK_TEXT = "/brand/logo-dark.png";
 
 export function Logo({ variant = "rail" }: { variant?: "rail" | "auth" }) {
   const [failed, setFailed] = useState(false);
@@ -37,14 +35,11 @@ export function Logo({ variant = "rail" }: { variant?: "rail" | "auth" }) {
     );
   }
 
-  // Sidebar follows the device theme.
+  // The app uses the website's dark look everywhere, so the white-text logo is always used.
   return (
     <div className="brand brand-logo">
-      <picture>
-        <source srcSet={LIGHT_TEXT} media="(prefers-color-scheme: dark)" />
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img ref={img} src={DARK_TEXT} alt="FYNE EDGE" onError={() => setFailed(true)} />
-      </picture>
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img ref={img} src={LIGHT_TEXT} alt="FYNE EDGE" onError={() => setFailed(true)} />
     </div>
   );
 }
