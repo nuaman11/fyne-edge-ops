@@ -1,7 +1,7 @@
 import "server-only";
 import { asc, count, desc } from "drizzle-orm";
-import { db, users, tickets, clients, clientDevelopers, deals, hiringRequests, hiringApprovals, ticketComments } from "@/lib/db";
-import type { ClientRow, DealRow, HiringRow, TicketRow, UserLite } from "@/lib/types";
+import { db, users, tickets, clients, clientDevelopers, deals, hiringRequests, hiringApprovals, ticketComments, projects } from "@/lib/db";
+import type { ClientRow, DealRow, HiringRow, ProjectRow, TicketRow, UserLite } from "@/lib/types";
 
 export async function listUsers(): Promise<UserLite[]> {
   return db.select({
@@ -59,4 +59,12 @@ export async function listHiring(): Promise<HiringRow[]> {
 export async function hasAnyUser() {
   const [{ n }] = await db.select({ n: count() }).from(users);
   return n > 0;
+}
+
+export async function listProjects(): Promise<ProjectRow[]> {
+  const rows = await db.select().from(projects).orderBy(desc(projects.completedOn), desc(projects.createdAt));
+  return rows.map((p) => ({
+    id: p.id, name: p.name, category: p.category, clientId: p.clientId, liveUrl: p.liveUrl, links: p.links ?? [],
+    description: p.description, tech: p.tech ?? [], completedOn: p.completedOn, createdById: p.createdById, updatedAt: p.updatedAt.toISOString(),
+  }));
 }

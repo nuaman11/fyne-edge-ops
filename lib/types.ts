@@ -59,3 +59,9 @@ export type DocDetail = Omit<DocListRow, "signers"> & {
   signers: DocSignerRow[]; fields: DocFieldRow[];
   events: { id: string; actorId: string | null; detail: string; createdAt: string }[];
 };
+
+export type ProjectRow = {
+  id: string; name: string; category: "WEBSITE" | "WEB_APP" | "MOBILE_APP" | "AI_AUTOMATION" | "OTHER";
+  clientId: string | null; liveUrl: string | null; links: { label: string; url: string }[];
+  description: string | null; tech: string[]; completedOn: string | null; createdById: string | null; updatedAt: string;
+};

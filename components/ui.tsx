@@ -66,6 +66,10 @@ const ICONS: Record<string, React.ReactNode> = {
   search: <><circle cx="11" cy="11" r="7" /><path d="M20 20l-4-4" /></>,
   check: <path d="M5 12l5 5 9-10" />,
   chat: <path d="M4 5h16v11H9l-5 4z" />,
+  grid: <><rect x="3" y="3" width="7.5" height="7.5" rx="1.5" /><rect x="13.5" y="3" width="7.5" height="7.5" rx="1.5" /><rect x="3" y="13.5" width="7.5" height="7.5" rx="1.5" /><path d="M14 17.25h6.5M17.25 14v6.5" /></>,
+  link: <><path d="M10 14a4.5 4.5 0 0 0 6.4 0l3.2-3.2a4.5 4.5 0 0 0-6.4-6.4L12 5.6" /><path d="M14 10a4.5 4.5 0 0 0-6.4 0l-3.2 3.2a4.5 4.5 0 0 0 6.4 6.4l1.2-1.2" /></>,
+  ext: <><path d="M14 4h6v6M20 4l-9 9" /><path d="M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5" /></>,
+  copy: <><rect x="8" y="8" width="12" height="12" rx="2" /><path d="M16 8V5a1 1 0 0 0-1-1H5a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h3" /></>,
   doc: <><path d="M6 3h8l5 5v13H6z" /><path d="M14 3v5h5M9 17c1.5-2 2.5-2 3.5 0s2 2 3.5 0" /></>,
 };
 export function Icon({ name }: { name: keyof typeof ICONS | string }) {

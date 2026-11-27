@@ -12,6 +12,7 @@ export const decisionEnum = pgEnum("decision", ["APPROVED", "REJECTED"]);
 export const documentStatusEnum = pgEnum("document_status", ["DRAFT", "OUT_FOR_SIGNATURE", "COMPLETED", "VOIDED"]);
 export const signerStatusEnum = pgEnum("signer_status", ["PENDING", "SIGNED", "DECLINED"]);
 export const fieldTypeEnum = pgEnum("document_field_type", ["SIGNATURE", "INITIALS", "DATE", "NAME", "TEXT"]);
+export const projectCategoryEnum = pgEnum("project_category", ["WEBSITE", "WEB_APP", "MOBILE_APP", "AI_AUTOMATION", "OTHER"]);
 
 const id = () => text("id").primaryKey().$defaultFn(() => crypto.randomUUID());
 const createdAt = () => timestamp("created_at", { withTimezone: true }).defaultNow().notNull();
@@ -137,6 +138,23 @@ export const ticketEvents = pgTable("ticket_events", {
   createdAt: createdAt(),
 }, (t) => [index("ticket_events_ticket_idx").on(t.ticketId)]);
 
+/** A finished project, with every link the team needs (live site, admin panel, store pages, repo, docs). */
+export const projects = pgTable("projects", {
+  id: id(),
+  name: text("name").notNull(),
+  category: projectCategoryEnum("category").notNull(),
+  clientId: text("client_id").references(() => clients.id, { onDelete: "set null" }),
+  liveUrl: text("live_url"),
+  /** Other links, in display order: [{ label: "Admin panel", url: "https://…" }] */
+  links: jsonb("links").$type<{ label: string; url: string }[]>().notNull().default([]),
+  description: text("description"),
+  tech: jsonb("tech").$type<string[]>().notNull().default([]),
+  completedOn: date("completed_on"),
+  createdById: text("created_by_id").references(() => users.id, { onDelete: "set null" }),
+  createdAt: createdAt(),
+  updatedAt: updatedAt(),
+}, (t) => [index("projects_category_idx").on(t.category)]);
+
 /** A PDF uploaded for signing. Files live in private Vercel Blob storage; only their storage path is kept here. */
 export const documents = pgTable("documents", {
   id: id(),
@@ -222,5 +240,6 @@ export type HiringApproval = typeof hiringApprovals.$inferSelect;
 export type TicketComment = typeof ticketComments.$inferSelect;
 export type TicketEvent = typeof ticketEvents.$inferSelect;
 export type Document = typeof documents.$inferSelect;
+export type Project = typeof projects.$inferSelect;
 export type DocumentSigner = typeof documentSigners.$inferSelect;
 export type DocumentField = typeof documentFields.$inferSelect;
