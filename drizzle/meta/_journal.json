@@ -22,6 +22,13 @@
       "when": 1795631919759,
       "tag": "0002_documents_esign",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1795773195682,
+      "tag": "0003_projects",
+      "breakpoints": true
     }
   ]
 }

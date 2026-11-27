@@ -86,6 +86,10 @@ npm run dev                 # http://localhost:3000
 - Moving a deal to **Lost** asks for a reason; the Pipeline page shows a "Why deals are lost" summary.
 - Closing a client that still has open tickets asks, per ticket, to mark it done or keep it open and reassign it.
 
+## Projects
+
+**Projects** (under Sales & delivery) lists everything the team has delivered, so links are never hunted for again. Each project has a category (Website, Web app, Mobile app, AI automation, Other), an optional client, a completion date, its live link, any number of other links (admin panel, staging, App Store / Google Play, repository, design files, docs), the tech it was built with, and notes. Filter by category or by text, copy any link with one tap, and find projects from the search bar. A closed client has an **Add to Projects** button that pre-fills the form. Anyone can add or edit a project; admins or the person who added it can delete it. Don't store passwords here.
+
 ## Documents and e-signing
 
 **Documents** in the sidebar lets the team sign PDFs inside the app:

@@ -60,3 +60,18 @@ export const FIELD_TYPES = [
   ["TEXT", "Text", 170, 20],
 ] as const;
 export type FieldType = (typeof FIELD_TYPES)[number][0];
+
+export const PROJECT_CATEGORIES = [
+  ["WEBSITE", "Websites"],
+  ["WEB_APP", "Web apps"],
+  ["MOBILE_APP", "Mobile apps"],
+  ["AI_AUTOMATION", "AI automations"],
+  ["OTHER", "Other"],
+] as const;
+export type ProjectCategory = (typeof PROJECT_CATEGORIES)[number][0];
+/** Singular names, for a single project's tag. */
+export const PROJECT_CATEGORY_ONE: Record<ProjectCategory, string> = {
+  WEBSITE: "Website", WEB_APP: "Web app", MOBILE_APP: "Mobile app", AI_AUTOMATION: "AI automation", OTHER: "Other",
+};
+/** Link labels offered when adding a link (any other label can be typed). */
+export const PROJECT_LINK_LABELS = ["Admin panel", "Staging", "App Store", "Google Play", "Dashboard", "Workflow", "API docs", "Repository", "Design (Figma)", "Documentation"];

@@ -97,7 +97,10 @@ export function ClientsView({ isAdmin, clients, users, openByClient, initial }: 
       </> : null };
     }
     return { body: <div className="toolbar"><Pill tone="ok">Closed {fmtDate(c.closedAt, true)}</Pill><div className="avs">{c.developerIds.map((id) => <Avatar key={id} user={userById.get(id)} />)}</div></div>,
-      foot: isAdmin ? <button className="btn sm ghost" onClick={() => act(() => setClientStage(c.id, "ACTIVE"))}>Reopen</button> : null };
+      foot: <>
+        {isAdmin ? <button className="btn sm ghost" onClick={() => act(() => setClientStage(c.id, "ACTIVE"))}>Reopen</button> : null}
+        <Link className="btn sm" href={`/projects?new=1&client=${c.id}`}>Add to Projects</Link>
+      </> };
   }
 
   const list = rows.filter((c) => c.stage === tab);

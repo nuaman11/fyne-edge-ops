@@ -30,6 +30,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     { label: "Sales & delivery", items: [
       { href: "/pipeline", label: "Pipeline", icon: "funnel", count: d!.n },
       { href: "/clients", label: "Clients", icon: "brief", count: c!.n },
+      { href: "/projects", label: "Projects", icon: "grid" },
     ] },
     { label: "People", items: [
       { href: "/hiring", label: "Hiring approvals", icon: "hire", count: hiring.filter((h) => hiringStatus(h) === "pending").length },
